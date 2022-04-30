@@ -40,5 +40,19 @@ module.exports = {
             console.log(error);
             throw new Error('Error creating account')
         }
+    },
+    signIn: async (parent, {username, email, password}, {models}) => {
+        if(email) {
+            email = email.trim().toLowerCase();
+        }
+        const user = await models.User.findOne({$or: [{email}, {username}]});
+        if(!user) {
+            throw new AuthenticationError('Error signing in'); 
+        }
+        const validPassword = await bcrypt.compare(password, user.password)
+        if(!validPassword) {
+            throw new AuthenticationError('Error signing in');
+        }
+        return jwt.sign({ id: user._id},process.env.JWT_SECRET)
     }
 }

@@ -6,17 +6,29 @@ const app = express();
 const port = process.env.PORT;
 const DB_HOST = process.env.DB_HOST;
 const { ApolloServer } = require('apollo-server-express');
+const jwt = require('jsonwebtoken')
 const db = require('./db');
 const models = require('./models');
 const typeDefs = require('./schema');
 const resolvers = require('./resolvers');
-
+const getToken = token => {
+    if(token){
+        try {
+            return jwt.verify(token, process.env.JWT_SECRET)
+        } catch (e) {
+            throw new Error('Session invalid');
+        }
+    }
+}
 //Connect to DB
 db.connect(DB_HOST);
 
 //Connect to ApolloServer
-const server = new ApolloServer({typeDefs, resolvers, context: () => {
-    return { models }
+const server = new ApolloServer({typeDefs, resolvers, context: ({req}) => {
+    const token = req.headers.authorization;
+    const user = getToken(token);
+    console.log(user)
+    return { models, user}
 }});
 
 //Apply middleware
