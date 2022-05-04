@@ -1,29 +1,49 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { AuthenticationError, ForbiddenError} = require('apollo-server-express');
+const mongoose = require('mongoose');
 const gravatar = require('../util/gravatar');
+const { model } = require('mongoose');
 
 module.exports = {
-    newNote: async (parent, { content }, { models }) => {
+    //CREATE A NOTE
+    newNote: async (parent, { content }, { models, user }) => {
+        if(!user) {
+            throw new AuthenticationError('You must be signed in to create a note')
+        }
         return await models.Note.create({
             content,
-            author: "Adam Scott"
+            author: mongoose.Types.ObjectId(user.id)
         });
     },
+    //UPDATE A NOTE
     updateNote: async (parent, {id, content}, { models }) => {
         return await models.Note.findOneAndUpdate(
             {_id:id}, 
             {$set: {content:content}},
             {new: true} );
     },
-    deleteNote: async (parent, {id}, { models }) => {
-        try{
+    //DELETE ONE NOTE
+    deleteNote: async (parent, {id}, { models, user }) => {
+        try {
             await models.Note.fideOneAndRemove({_id: id});
             return true;
         } catch (error){
             return false;
         }
     },
+    //DELETE ALL NOTES
+    deleteAllNotes: async (parent, args, {models}) => {
+        try{
+            await models.Note.deleteMany({})
+            return true;
+        } catch (error){
+            console.log(error)
+            return false;
+        }
+        
+    },
+    //REGISTRATION
     signUp: async (paremt, {username, email, password}, {models}) => {
         email = email.trim().toLowerCase();
         const hashed = await bcrypt.hash(password, 10);
@@ -41,6 +61,7 @@ module.exports = {
             throw new Error('Error creating account')
         }
     },
+    //SING IN
     signIn: async (parent, {username, email, password}, {models}) => {
         if(email) {
             email = email.trim().toLowerCase();
