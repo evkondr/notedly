@@ -17,16 +17,30 @@ module.exports = {
         });
     },
     //UPDATE A NOTE
-    updateNote: async (parent, {id, content}, { models }) => {
+    updateNote: async (parent, {id, content}, { models, user }) => {
+        if(!user) {
+            throw new AuthenticationError('You must be signed in to delete a note');
+        }
+        const note = await models.Note.findById(id);
+        if(note && String(note.author) !== user.id) {
+            throw new AuthenticationError('You must be signed in to delete a note');
+        }
         return await models.Note.findOneAndUpdate(
             {_id:id}, 
-            {$set: {content:content}},
+            {$set: {content}},
             {new: true} );
     },
     //DELETE ONE NOTE
     deleteNote: async (parent, {id}, { models, user }) => {
+        if(!user) {
+            throw new AuthenticationError('You must be signed in to delete a note');
+        }
+        const note = await models.Note.findById(id)
+        if(note && String(note.author) !== user.id) {
+            throw new ForbiddenError('You don\'t have permissions to delete the note');
+        }
         try {
-            await models.Note.fideOneAndRemove({_id: id});
+            await note.remove();
             return true;
         } catch (error){
             return false;
