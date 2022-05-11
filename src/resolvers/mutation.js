@@ -6,7 +6,7 @@ const gravatar = require('../util/gravatar');
 const { model } = require('mongoose');
 
 module.exports = {
-    //CREATE A NOTE
+    //Create a note
     newNote: async (parent, { content }, { models, user }) => {
         if(!user) {
             throw new AuthenticationError('You must be signed in to create a note')
@@ -16,7 +16,7 @@ module.exports = {
             author: mongoose.Types.ObjectId(user.id)
         });
     },
-    //UPDATE A NOTE
+    //Update a note
     updateNote: async (parent, {id, content}, { models, user }) => {
         if(!user) {
             throw new AuthenticationError('You must be signed in to delete a note');
@@ -30,7 +30,7 @@ module.exports = {
             {$set: {content}},
             {new: true} );
     },
-    //DELETE ONE NOTE
+    //Delete a note
     deleteNote: async (parent, {id}, { models, user }) => {
         if(!user) {
             throw new AuthenticationError('You must be signed in to delete a note');
@@ -46,7 +46,7 @@ module.exports = {
             return false;
         }
     },
-    //DELETE ALL NOTES
+    //Delete all notes
     deleteAllNotes: async (parent, args, {models}) => {
         try{
             await models.Note.deleteMany({})
@@ -57,7 +57,7 @@ module.exports = {
         }
         
     },
-    //REGISTRATION
+    //Registration
     signUp: async (paremt, {username, email, password}, {models}) => {
         email = email.trim().toLowerCase();
         const hashed = await bcrypt.hash(password, 10);
@@ -75,7 +75,7 @@ module.exports = {
             throw new Error('Error creating account')
         }
     },
-    //SING IN
+    //Sign in
     signIn: async (parent, {username, email, password}, {models}) => {
         if(email) {
             email = email.trim().toLowerCase();
@@ -89,5 +89,36 @@ module.exports = {
             throw new AuthenticationError('Error signing in');
         }
         return jwt.sign({ id: user._id},process.env.JWT_SECRET)
-    }
+    },
+    //Toggle favorite
+    toggleFavorite: async (parent, { id }, { models, user }) => {
+        if (!user) {
+            throw new AuthenticationError();
+        }
+        const note = await models.Note.findById(id);
+        const hasUser = note.favoritedBy.indexOf(user.id);
+        if (hasUser >= 0) {
+            return await models.Note.findByIdAndUpdate(id, {
+                $pull: {
+                    favoritedBy: mongoose.Types.ObjectId(user.id)
+                },
+                $inc: {
+                    favoriteCount: -1
+                }
+            }, {
+                new: true
+            });
+        } else {
+            return await models.Note.findByIdAndUpdate(id, {
+                $push: {
+                    favoritedBy: mongoose.Types.ObjectId(user.id)
+                },
+                $inc: {
+                    favoriteCount: 1
+                }
+            }, {
+                new: true
+            })
+        }
+    } 
 }
